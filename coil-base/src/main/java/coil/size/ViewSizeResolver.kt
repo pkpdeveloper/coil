@@ -1,6 +1,7 @@
 package coil.size
 
 import android.view.View
+import android.view.ViewGroup
 import android.view.ViewTreeObserver
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -45,11 +46,28 @@ interface ViewSizeResolver<T : View> : SizeResolver {
                 override fun onPreDraw(): Boolean {
                     if (!isResumed) {
                         isResumed = true
-
                         viewTreeObserver.removePreDrawListenerSafe(this)
-                        val width = max(1, view.width - view.paddingLeft - view.paddingRight)
-                        val height = max(1, view.height - view.paddingTop - view.paddingBottom)
-                        continuation.resume(PixelSize(width, height))
+
+                        val viewWidth = view.width
+                        val viewHeight = view.height
+
+                        val rawWidth = if (viewWidth == 0 && view.layoutParams?.width == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                            (view.parent as? View)?.width ?: 0
+                        } else {
+                            viewWidth - view.paddingLeft - view.paddingRight
+                        }
+
+                        val rawHeight = if (viewHeight == 0 && view.layoutParams?.height == ViewGroup.LayoutParams.WRAP_CONTENT) {
+                            (view.parent as? View)?.height ?: 0
+                        } else {
+                            viewHeight - view.paddingTop - view.paddingBottom
+                        }
+
+                        val size = PixelSize(
+                            width = max(1, rawWidth),
+                            height = max(1, rawHeight)
+                        )
+                        continuation.resume(size)
                     }
                     return true
                 }
